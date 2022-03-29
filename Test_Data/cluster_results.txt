@@ -1,0 +1,36 @@
+eps: 0.005
+clusters: 397
+points clustered: 179864
+C-H score: 1051
+
+eps: 0.0075
+clusters: 551
+points clustered: 322384
+C-H Score: 2003
+
+eps: 0.0085
+clusters: 627
+points clustered: 365416
+C-H Score: 2758
+
+eps: 0.009
+clusters: 635
+points clusters: 382889
+C-H Score: 3287
+
+eps: 0.01
+clusters: 638
+points clustered: 412602
+
+eps: 0.0125
+clusters: 451
+points clustered: 463384
+C-H Score 10216
+
+eps: 0.015
+clusters: 350
+points clustered: 492995
+
+
+as eps increases, cluster number decreases as more points are joined into existing clusters.
+object sizes grow and become less precise, begin to merge together.
