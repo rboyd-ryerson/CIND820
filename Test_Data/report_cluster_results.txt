@@ -1,0 +1,28 @@
+Effectiveness
+-------------
+-performance measures
+-calinsky-harabsz (variance ratio criterion) 
+-silhouette score
+
+Efficiency
+----------
+time
+
+Stability
+---------
+robust results
+
+
+eps: 0.005
+Number of clusters: 628
+Points clustered: 392032
+Calinski-Harabsz Score: 1041.4200076575146
+Silhouette Score: -0.38613669685928725
+Total Runtime: 0:05:01.718997
+
+eps:0.0055
+Number of clusters: 503
+Points clustered: 437564
+Calinski-Harabsz Score: 1845.9803571982711
+Silhouette Score: -0.2987440417594093
+Total Runtime: 0:04:59.574000
