@@ -45,15 +45,15 @@ from PIL import ImageStat as istat
 from PIL import ImageOps
 
 
-# In[ ]:
+# In[6]:
 
 
-import seaborn as sns
+import datetime
 
 
 # #### Data is loaded and prepared
 
-# In[6]:
+# In[7]:
 
 
 #original dataset https://nrs.objectstore.gov.bc.ca/gdwuts/092/092g/2016/dsm/bc_092g025_3_4_2_xyes_8_utm10_20170601_dsm.laz
@@ -63,14 +63,14 @@ with lp.open(path_to_data) as las_file:
     las_data = las_file.read()
 
 
-# In[7]:
+# In[8]:
 
 
 # data loaded into a dataframe
-df = pd.DataFrame({"X":las_data.x,"Y":las_data.y,"Z":las_data.z,"Intensity":las_data.intensity,"return_num":las_data.return_number,"totalreturns":las_data.num_returns,"classification":las_data.classification})
+df = pd.DataFrame({"X":las_data.x,"Y":las_data.y,"Z":las_data.z,"Intensity":las_data.intensity,"return_number":las_data.return_number,"total_returns":las_data.num_returns,"classification":las_data.classification})
 
 
-# In[8]:
+# In[9]:
 
 
 #full dataset displayed on a scatter plot
@@ -78,19 +78,19 @@ fig,ax = plt.subplots(figsize = (15,15))
 ax.scatter(df['X'],df['Y'],zorder=1,alpha=0.25,c='black',s=0.001)
 
 
-# In[9]:
+# In[10]:
 
 
 print("Total points:" + str(las_data.header.point_count))
 
 
-# In[10]:
+# In[11]:
 
 
 #print("Classes: " + str(set(list(df['classification']))))
 
 
-# In[11]:
+# In[12]:
 
 
 #data summary
@@ -99,7 +99,7 @@ df.describe()
 
 # #### The full original dataset is too large to work with so it is clipped to a smaller study area. The dataframe is queried by the study area longitude and latitude boundary. The pre-classified ground points, class 2, are removed (since we are not concerned with ground right now), class 1 are the unclassified points and we only want to work with these.
 
-# In[12]:
+# In[13]:
 
 
 # Define the area of interest, these values in meters are in the "NAD83 UTM 10" coordinate system of the provided dataset
@@ -108,91 +108,148 @@ df.describe()
 aoi_extent = {'xmax':492349.0731766,'xmin':492043.6935073,'ymax':5458645.8660691,'ymin':5458340.4864470}
 
 
-# In[285]:
+# In[14]:
 
 
 #query the dataframe to return only the points within the extent above and remove the points defined as ground as well
-df_clip = df.query("X>{0}&X<{1}&Y>{2}&Y<{3}&Intensity<200".format(aoi_extent['xmin'],aoi_extent['xmax'],aoi_extent['ymin'],aoi_extent['ymax']))
+df_clip = df.query("X>{0}&X<{1}&Y>{2}&Y<{3}".format(aoi_extent['xmin'],aoi_extent['xmax'],aoi_extent['ymin'],aoi_extent['ymax']))
 
 
-# In[385]:
+# #### Dataset statistics and information - exploratory
+
+# In[15]:
 
 
 df_clip.describe()
 
 
-# #### Dataset statistics and information - exploratory
-
-# In[386]:
+# In[16]:
 
 
 #renaming the data frame for clarity
 data = df_clip
 
 
-# In[387]:
+# In[17]:
 
 
-mp.pyplot.hist(data['totalreturns'])
+mp.pyplot.hist(data['return_number'])
 
 
-# In[388]:
+# In[18]:
+
+
+mp.pyplot.hist(data['total_returns'])
+
+
+# In[19]:
+
+
+#histogram of returns as a ratio
+mp.pyplot.hist(data['return_number']/data['total_returns'])
+
+
+# In[20]:
+
+
+mp.pyplot.hist(data['X'])
+
+
+# In[21]:
 
 
 mp.pyplot.hist(data['Y'])
 
 
-# In[389]:
+# In[22]:
 
 
 mp.pyplot.hist(data['Z'])
 
 
-# In[390]:
+# In[23]:
 
 
 mp.pyplot.hist(data['Intensity'])
-#was very heavy on the low value and light on the high so queried to only 300 or less
+#very heavy on the low value and light on the high so adjusted to only 200 or less
 
 
-# In[391]:
+# In[24]:
 
 
-i_cutoff = 300
+point_count = len(data)
+print(point_count)
 
 
-# In[392]:
+# In[25]:
 
 
-len(data[data['Intensity']<i_cutoff])
+i_cutoff = 200
 
 
-# In[393]:
+# In[26]:
 
 
-len(data[data['Intensity']>i_cutoff])
+points_below_cutoff = len(data[data['Intensity']<i_cutoff])
+print(points_below_cutoff)
+print(points_below_cutoff/point_count)
 
 
-# In[394]:
+# In[27]:
 
 
-mp.pyplot.hist(data[data['Intensity']<i_cutoff])
+points_above_cutoff = len(data[data['Intensity']>i_cutoff])
+print(points_above_cutoff)
+print(points_above_cutoff/point_count)
 
 
-# In[395]:
+# In[28]:
 
 
-len(data[data['Intensity']>i_cutoff])/len(data[data['Intensity']<i_cutoff])
+#create a list of the new max value to replace all the value above the cutoff value
+vals = []
+for i in range(points_above_cutoff):
+    vals.append(i_cutoff)
 
 
-# In[396]:
+# In[29]:
+
+
+len(vals)
+
+
+# In[30]:
+
+
+len(data.query("Intensity>200"))
+
+
+# In[31]:
+
+
+data['Intensity'].mask(data['Intensity'] > 200,200,inplace=True)
+
+
+# In[32]:
+
+
+len(data.query("Intensity>200"))
+
+
+# In[33]:
+
+
+mp.pyplot.hist(data['Intensity'])
+
+
+# In[34]:
 
 
 #summarize the normalized data
 data.describe()
 
 
-# In[397]:
+# In[35]:
 
 
 #study area points displayed on a scatter plot
@@ -200,7 +257,7 @@ fig,ax = plt.subplots(figsize = (15,15))
 ax.scatter(data['X'],data['Y'],zorder=1,alpha=0.5,c='black',s=0.01)
 
 
-# In[398]:
+# In[36]:
 
 
 #the height is used value to visualize in 3d, since the values are in meters for all 3 axes, it plots nicely as is
@@ -213,7 +270,7 @@ ax.scatter3D(data['X'],data['Y'],data['Z'],c='black',s=0.01,alpha=0.5)
 
 # # DEM Height Values
 
-# In[399]:
+# In[37]:
 
 
 # The Z values are an absolute elevation which is not as useful as height relative to the ground
@@ -222,63 +279,70 @@ ax.scatter3D(data['X'],data['Y'],data['Z'],c='black',s=0.01,alpha=0.5)
 
 # The DEM was provided with the lidar data, I can clip this and extract the elevation of the ground for the entire area. Where the is something on the ground such as a building, the value is estimated using the nearest ground points available. I can then subtract the laser return value by the ground value to get the relative height of the object instead of the absolute height to sea level. This gives a more accurate height value to use with the algorithms.
 
-# In[400]:
+# In[38]:
 
 
 dem_path = "F:/Data/Lidar/images/BCVAN_DEM1m_Clip.tif"
 img0 = PIL.Image.open(dem_path)
 
 
-# In[401]:
+# In[39]:
 
 
 dem_array = np.asarray(img0)
 
 
-# In[415]:
+# In[40]:
 
 
 dem_img = img0.convert("F")
 
 
-# In[416]:
+# In[41]:
 
 
 #dem_img = img0.convert("RGB")
 
 
-# In[417]:
+# In[42]:
 
 
 np.asarray(dem_img)
 
 
-# In[418]:
+# In[43]:
 
 
-x_dem_img = (data['X'] - min(data['X']))/(max(data['X']-min(data['X'])))*306
-y_dem_img = (data['Y'] - min(data['Y']))/(max(data['Y']-min(data['Y'])))*306
+dem_scaler = len(dem_array)-1
+print(dem_scaler)
 
 
-# In[419]:
+# In[44]:
+
+
+x_dem_img = (data['X'] - min(data['X']))/(max(data['X']-min(data['X'])))*dem_scaler
+y_dem_img = (data['Y'] - min(data['Y']))/(max(data['Y']-min(data['Y'])))*dem_scaler
+
+
+# In[45]:
 
 
 x_dem_img
 
 
-# In[420]:
+# In[46]:
 
 
 coord_array_dem = np.array(pd.DataFrame({"X":x_dem_img,"Y":y_dem_img}))
 
 
-# In[421]:
+# In[47]:
 
 
 coord_array_dem
 
 
-# In[422]:
+# In[48]:
 
 
 dem_value = []
@@ -287,50 +351,142 @@ for coord in coord_array_dem:
     dem_value.append(val)
 
 
-# In[423]:
+# In[49]:
 
 
 len(dem_value)
 
 
-# In[424]:
+# In[50]:
 
 
 data['dem_value'] = dem_value
 
 
-# In[425]:
+# In[51]:
 
 
 data
 
 
-# In[426]:
+# In[52]:
 
 
 data['height'] = data['Z'] - data['dem_value']
 
 
-# In[427]:
+# In[53]:
 
 
 data['height'].describe()
 
 
-# In[428]:
+# In[54]:
 
 
-data
+#data with height values added
+data.describe()
 
 
-# In[429]:
+# In[55]:
 
 
-df_unclassified = data.query("classification==1")
-df_ground = data.query("classification==2")
+#the return ratio attribute is created by dividing the return number by the total return count
+#the histogram for this was shown above
+data['return_ratio'] = data['return_number']/data['total_returns']
 
 
-# In[430]:
+# In[56]:
+
+
+#data with return_ratio values added
+data.describe()
+
+
+# # Normalization
+
+# #### Data normalized and preprocessed for analysis
+
+# In[57]:
+
+
+x_normal = (data['X'] - min(data['X']))/(max(data['X']-min(data['X'])))
+
+
+# In[58]:
+
+
+y_normal = (data['Y'] - min(data['Y']))/(max(data['Y']-min(data['Y'])))
+
+
+# In[59]:
+
+
+z_normal = (data['Z'] - min(data['Z']))/(max(data['Z']-min(data['Z'])))
+
+
+# In[60]:
+
+
+height_normal = (data['height'] - min(data['height']))/(max(data['height']-min(data['height'])))
+
+
+# In[61]:
+
+
+i_normal = (data['Intensity'] - min(data['Intensity']))/(max(data['Intensity']-min(data['Intensity'])))
+
+
+# In[62]:
+
+
+# new dataframe containing all the normalized values is created
+df_normal = pd.DataFrame({'X':x_normal,'Y':y_normal,'Z':z_normal,'height':height_normal,'Intensity':i_normal,'return_ratio':data['return_ratio'],'classification':data['classification']})
+
+
+# In[63]:
+
+
+df_normal.describe()
+
+
+# In[64]:
+
+
+# Plotting normalized looks the same but with the new scale
+fig,ax = plt.subplots(figsize = (10,10))
+ax.scatter(df_normal['X'],df_normal['Y'],c='black',s=0.01,alpha=0.5)
+
+
+# In[65]:
+
+
+df_normal.dtypes
+
+
+# # Supervised Classification for ground
+# ## Classify the ground for supervised classifier using the provided ground points as labels
+
+# In[66]:
+
+
+df_unclassified = df_normal.query("classification==1")
+df_ground = df_normal.query("classification==2")
+
+
+# In[67]:
+
+
+df_ground.describe()
+
+
+# In[68]:
+
+
+df_unclassified.describe()
+
+
+# In[69]:
 
 
 # Plotting the pre classified/labelled ground points for reference
@@ -338,7 +494,7 @@ fig,ax = plt.subplots(figsize = (15,15))
 ax.scatter(df_ground['X'],df_ground['Y'],c='black',s=0.01,alpha=0.5)
 
 
-# In[431]:
+# In[70]:
 
 
 # Plotting the pre classified/labelled unclassified points for reference
@@ -347,284 +503,240 @@ fig,ax = plt.subplots(figsize = (15,15))
 ax.scatter(df_unclassified['X'],df_unclassified['Y'],c='black',s=0.01,alpha=0.5)
 
 
-# # Normalization
-
-# #### Data normalized and preprocessed for analysis
-
-# In[432]:
+# In[71]:
 
 
-x_normal = (data['X'] - min(data['X']))/(max(data['X']-min(data['X'])))
+df_normal.describe()
 
 
-# In[433]:
-
-
-y_normal = (data['Y'] - min(data['Y']))/(max(data['Y']-min(data['Y'])))
-
-
-# In[434]:
-
-
-z_normal = (data['Z'] - min(data['Z']))/(max(data['Z']-min(data['Z'])))
-
-
-# In[435]:
-
-
-height_normal = (data['height'] - min(data['height']))/(max(data['height']-min(data['height'])))
-
-
-# In[436]:
-
-
-i_normal = (data['Intensity'] - min(data['Intensity']))/(max(data['Intensity']-min(data['Intensity'])))
-
-
-# In[437]:
-
-
-# new dataframe containing all the normalized values is created
-df_normal = pd.DataFrame({'X':x_normal,'Y':y_normal,'Z':z_normal,'height':height_normal,'Intensity':i_normal,'return_num':df_clip['return_num'],'totalreturns':df_clip['totalreturns'],'classification':df_clip['classification']})
-
-
-# In[438]:
-
-
-df_normal
-
-
-# In[439]:
-
-
-# Plotting normalized looks the same but with the new scale
-fig,ax = plt.subplots(figsize = (10,10))
-ax.scatter(df_normal['X'],df_normal['Y'],c='black',s=0.01,alpha=0.5)
-
-
-# In[440]:
-
-
-df_normal.dtypes
-
-
-# # Supervised Classification
-# ## Ground
-
-# In[441]:
-
-
-# Classify the ground for supervised classifier using the provided ground points as labels:
-
-
-# In[442]:
-
-
-df_normal
-
-
-# In[443]:
+# In[72]:
 
 
 train,test = train_test_split(df_normal)
 
 
-# In[444]:
+# In[73]:
 
 
-train_features = pd.DataFrame({"Intensity":train['Intensity'],"return_num":train['return_num'],"totalreturns":train['totalreturns'],"height":train['height']})
+train_features = pd.DataFrame({"Intensity":train['Intensity'],"return_ratio":train['return_ratio'],"height":train['height']})
 
 
-# In[445]:
+# In[74]:
 
 
 train_labels = np.ravel(pd.DataFrame({"classification":train['classification']}))
 
 
-# In[446]:
+# In[75]:
 
 
-test_features = pd.DataFrame({"Intensity":test['Intensity'],"return_num":test['return_num'],"totalreturns":test['totalreturns'],"height":test['height']})
+test_features = pd.DataFrame({"Intensity":test['Intensity'],"return_ratio":test['return_ratio'],"height":test['height']})
 
 
-# In[447]:
+# In[76]:
 
 
 test_labels = np.ravel(pd.DataFrame({"classification":test['classification']}))
 
 
-# In[448]:
+# In[77]:
 
 
 #creates the model
 model = RandomForestClassifier(max_depth=5,random_state=0,n_estimators=50,criterion="entropy",verbose=0,class_weight="balanced")
 
 
-# In[449]:
+# In[78]:
 
 
 # trains the model - fit the train data to the model
+starttime = datetime.datetime.now()
 model_fit = model.fit(train_features,train_labels)
+endtime = datetime.datetime.now()
+runtime = endtime-starttime
+print(runtime)
 
 
-# In[450]:
+# In[79]:
+
+
+#decisionpath = model_fit.decision_path(test_features)
+#print(decisionpath)
+
+
+# In[80]:
 
 
 #predict the test data
 test_predictions = model_fit.predict(test_features)
 
 
-# In[451]:
+# In[81]:
 
 
 len([i for i in test_predictions if i == 1])
 
 
-# In[452]:
+# In[82]:
 
 
 len([i for i in test_predictions if i != 1])
 
 
-# In[453]:
+# In[83]:
 
 
 model_fit.score(test_features,test_labels)
 
 
-# In[454]:
+# In[84]:
 
 
+#test set results
 confusion_matrix(test_labels,test_predictions)
 
 
-# In[455]:
+# In[85]:
 
 
-table = pd.DataFrame({"Intensity":df_normal['Intensity'],"return_num":df_normal['return_num'],"totalreturns":df_normal['totalreturns'],"H":df_normal['height']})
+table = pd.DataFrame({"Intensity":df_normal['Intensity'],"return_ratio":df_normal['return_ratio'],"H":df_normal['height']})
 
 
-# In[456]:
+# In[86]:
 
 
 table_labels = df_normal['classification']
 
 
-# In[457]:
+# In[87]:
 
 
 table_predictions = model_fit.predict(table)
 
 
-# In[458]:
+# In[88]:
 
 
 len([i for i in table_predictions if i == 1])
 
 
-# In[459]:
+# In[89]:
 
 
 len([i for i in table_predictions if i != 1])
 
 
-# In[460]:
+# In[90]:
 
 
 model_fit.score(table,table_labels)
 
 
-# In[461]:
+# In[91]:
 
 
-confusion_matrix(table_labels,table_predictions)
+#full dataset results
+print("Confusion Matrix:")
+print(str(confusion_matrix(table_labels,table_predictions)))
+print("")
+print("Accuracy Score:")
+print(str(model_fit.score(table,table_labels)))
+print("")
+print("Runtime: " + str(runtime))
 
 
-# In[462]:
+# In[92]:
 
 
 df_normal['prediction'] = table_predictions.tolist()
 
 
-# In[463]:
+# In[93]:
 
 
 df_normal
 
 
-# In[464]:
+# In[94]:
 
 
 df_normal.query("classification != prediction")
 
 
-# In[465]:
+# In[95]:
 
 
 predicted_ground = df_normal.query("prediction == 2")
 
 
-# In[466]:
+# In[96]:
 
 
 predicted_ground
 
 
-# In[467]:
+# In[97]:
+
+
+#all of the predict ground points were the last point returned which should be expected
+predicted_ground.query("return_ratio!=1")
+
+
+# In[98]:
 
 
 fig,ax = plt.subplots(figsize = (15,15))
 ax.scatter(predicted_ground['X'],predicted_ground['Y'],zorder=1,alpha=0.5,c='black',s=0.01)
 
 
-# In[468]:
-
-
-last_ground = predicted_ground.query("return_num==totalreturns")
-
-
-# In[469]:
-
-
-fig,ax = plt.subplots(figsize = (15,15))
-ax.scatter(last_ground['X'],last_ground['Y'],zorder=1,alpha=0.5,c='black',s=0.01)
-
-
-# In[470]:
-
-
-last_ground
-
-
-# In[471]:
+# In[99]:
 
 
 predicted_non_ground = df_normal.query("prediction == 1")
 
 
-# In[472]:
+# In[100]:
 
 
-fig,ax = plt.subplots(figsize = (10,10))
+fig,ax = plt.subplots(figsize = (15,15))
 ax.scatter(predicted_non_ground['X'],predicted_non_ground['Y'],zorder=1,alpha=0.5,c='black',s=0.01)
 
 
-# In[473]:
+# In[101]:
 
 
 predicted_non_ground
 
 
-# In[474]:
+# In[102]:
 
 
+#the non ground points remain to be classified
 data = predicted_non_ground
 
 
-# In[475]:
+# In[103]:
 
 
-data
+#non ground points that were not the last return, meaning they are above something else
+last_remaining_points = data.query("return_ratio!=1")
+non_last_remaining_points = data.query("return_ratio==1")
+
+
+# In[104]:
+
+
+#non last collected point of each pulse
+fig,ax = plt.subplots(figsize = (15,15))
+ax.scatter(last_remaining_points['X'],last_remaining_points['Y'],zorder=1,alpha=0.5,c='black',s=0.01)
+
+
+# In[105]:
+
+
+#last collected point of each pulse
+fig,ax = plt.subplots(figsize = (15,15))
+ax.scatter(non_last_remaining_points['X'],non_last_remaining_points['Y'],zorder=1,alpha=0.5,c='black',s=0.01)
 
 
 # ## Add Imagery Data
@@ -632,31 +744,31 @@ data
 # #### The image was clipped using external software (QGIS, open-source mapping program) to the same area of interest as above
 # #### The selected image size is 4084x4084, the lidar data is normalized by 4084 to extract the nearest pixel value(r,g,b) from the image for each point
 
-# In[476]:
+# In[106]:
 
 
 image_path = "F:/Data/Lidar/images/BCVANC15_P9_aoiclip.tif"
 
 
-# In[477]:
+# In[107]:
 
 
 img = PIL.Image.open(image_path)
 
 
-# In[478]:
+# In[108]:
 
 
 rgb_img = img.convert("RGB")
 
 
-# In[479]:
+# In[109]:
 
 
 rgb_img
 
 
-# In[480]:
+# In[110]:
 
 
 #this can be used to crop the imagery if we knew the exact coordinates, but I used QGIS to clip the imagery instead
@@ -664,55 +776,57 @@ rgb_img
 #rgb_img = img.crop((left,top,right,bottom))
 
 
-# In[481]:
+# In[111]:
 
 
 #import math
 #math.sqrt(istat.Stat(rgb_img).count[0])
 
 
-# In[482]:
+# In[112]:
 
 
 #this size aligns the pixels to the lidar points to extract the rgb values for each point
-img.size
+print(img.size)
+img_scaler = img.size[0]-1
+print(img_scaler)
 
 
-# In[483]:
+# In[113]:
 
 
 #The image origin (top left) is different than the coordinate system of the lidar so the image needs to be flipped for the calculation to align them
 rgb_img_flip = PIL.ImageOps.flip(rgb_img)
 
 
-# In[484]:
+# In[114]:
 
 
 #rgb_img.getpixel((2070,2070))
 
 
-# In[485]:
+# In[115]:
 
 
 # rescales the point values to line up with the pixels in the imagery - same idea as normalization
 # this is basically reprojecting the coordinates of the lidar points to the coordinates of the image
-x_img = (data['X'] - min(data['X']))/(max(data['X']-min(data['X'])))*4083
-y_img = (data['Y'] - min(data['Y']))/(max(data['Y']-min(data['Y'])))*4083
+x_img = (data['X'] - min(data['X']))/(max(data['X']-min(data['X'])))*img_scaler
+y_img = (data['Y'] - min(data['Y']))/(max(data['Y']-min(data['Y'])))*img_scaler
 
 
-# In[486]:
+# In[116]:
 
 
 y_img
 
 
-# In[487]:
+# In[117]:
 
 
 coord_array = np.array(pd.DataFrame({"X":x_img,"Y":y_img}))
 
 
-# In[488]:
+# In[118]:
 
 
 coord_array
@@ -721,7 +835,7 @@ coord_array
 
 # #### The nearest R,G,B pixel value from the image is extracted for each lidar point and the results are saved as a field in the data frame
 
-# In[489]:
+# In[119]:
 
 
 rgb_data = []
@@ -743,38 +857,13 @@ data['g'] = rgb_data_g
 data['b'] = rgb_data_b
 
 
-# In[490]:
+# In[120]:
 
 
 data
 
 
-# ## Vegetation - abandoned
-
-# In[491]:
-
-
-#trying to extract the vegetation using combination of fields for supervised classifier, to varied success
-#vegetation = df_all.query("return_num < totalreturns & totalreturns > 1")
-#fig,ax = plt.subplots(figsize = (15,15))
-#ax.scatter(vegetation['X'],vegetation['Y'],zorder=1,alpha=0.5,c='black',s=0.01)
-
-
-# In[492]:
-
-
-vegetation = data.query("return_num < totalreturns & totalreturns > 1")
-#vegetation = data.query("r<0.9 & g>0.1")
-
-
-# In[493]:
-
-
-fig,ax = plt.subplots(figsize = (15,15))
-ax.scatter(vegetation['X'],vegetation['Y'],zorder=1,alpha=0.5,c='black',s=0.01)
-
-
-# In[494]:
+# In[121]:
 
 
 data_normal = data
@@ -782,7 +871,7 @@ data_normal = data
 
 # #### The R,G,B values are normalized like the rest:
 
-# In[495]:
+# In[122]:
 
 
 r_normal = (data['r'] - min(data['r']))/(max(data['r']-min(data['r'])))
@@ -793,7 +882,7 @@ data_normal['g'] = g_normal
 data_normal['b'] = b_normal
 
 
-# In[496]:
+# In[123]:
 
 
 data_normal
@@ -801,13 +890,13 @@ data_normal
 
 # #### Additonal testing and improvements
 
-# In[497]:
+# In[124]:
 
 
 data = data_normal
 
 
-# In[498]:
+# In[125]:
 
 
 data
@@ -817,86 +906,81 @@ data
 # #### Attempt to classify points into undetermined classes based on the data
 # ##### Variables: Height, Intensity, R, G, B
 
-# In[499]:
+# In[126]:
 
 
 #features = pd.DataFrame({"R":data['r'],"G":data['g'],"B":data['b'],"H":data['height'],"I":data['Intensity']})
 #features = pd.DataFrame({"R":data['r'],"G":data['g'],"B":data['b']})
-features = pd.DataFrame({"H":data['height'],"I":data['Intensity']})
+features = pd.DataFrame({"H":data['height'],"I":data['Intensity'],"return_ratio":data['return_ratio']})
 
 
-# In[500]:
+# In[127]:
 
 
 features
 
 
-# In[501]:
+# In[128]:
 
 
 X1 = np.array(features)
 
 
-# In[502]:
+# In[129]:
 
 
 X1
 
 
-# In[503]:
+# In[130]:
 
 
 # initialize model
 kmeancluster = cluster.KMeans(3,init='random',n_init=10)
 
 
-# In[504]:
+# In[131]:
 
 
 # fit to data
+starttime = datetime.datetime.now()
 k_clusters = kmeancluster.fit(X1)
+endtime = datetime.datetime.now()
+runtime = endtime-starttime
+print(runtime)
 
 
-# In[505]:
+# In[132]:
 
 
 len(k_clusters.labels_)
 
 
-# In[506]:
+# In[133]:
 
 
 print("Number of clusters:" + str(len(np.unique(k_clusters.labels_))))
 print("Points clustered: " + str(len([i for i in k_clusters.labels_ if i != -1])))
+print("Calinski-Harabsz Score: " + str(calinski_harabasz_score(X1,k_clusters.labels_)))
+print("Silhouette Score: " + str(silhouette_score(X1,k_clusters.labels_,sample_size=10000)))
+print("Runtime: " + str(runtime))
 
 
-# In[507]:
-
-
-calinski_harabasz_score(X1,k_clusters.labels_)
-
-
-# In[547]:
-
-
-silhouette_score(X1,k_clusters.labels_,sample_size=10000)
-
-
-# In[508]:
+# In[134]:
 
 
 # add results to data frame
 data['k_cluster'] = k_clusters.labels_
 
 
-# In[509]:
+# In[135]:
 
 
 #rename for clarity again
 results = data
 
 
-# In[510]:
+# In[136]:
 
 
 # visualize the classes
@@ -904,21 +988,14 @@ fig,ax = plt.subplots(figsize = (15,15))
 ax.scatter(results['X'],results['Y'],c=results['k_cluster'],s=0.1,alpha=0.5)
 
 
-# In[511]:
+# In[137]:
 
 
 fig,ax = plt.subplots(figsize = (15,15)),plt.axes(projection='3d')
 ax.scatter3D(results['X'],results['Y'],results['Z'],c=results['k_cluster'],s=0.01,alpha=1)
 
 
-# In[512]:
-
-
-#try to remove shadow
-colour_manip = pd.DataFrame()
-
-
-# In[513]:
+# In[138]:
 
 
 results
@@ -928,7 +1005,7 @@ results
 
 # #### This section will attempt to use the previous classificiation label to cluster the points into local distinct objects
 
-# In[573]:
+# In[139]:
 
 
 df2 = pd.DataFrame({"X":data['X'],"Y":data['Y'],"K":data['k_cluster']})
@@ -937,19 +1014,19 @@ df2 = pd.DataFrame({"X":data['X'],"Y":data['Y'],"K":data['k_cluster']})
 #df2 = pd.DataFrame({"H":data['height'],"I":data['Intensity']})
 
 
-# In[574]:
+# In[140]:
 
 
 X2 = np.array(df2)
 
 
-# In[575]:
+# In[141]:
 
 
 X2
 
 
-# In[576]:
+# In[142]:
 
 
 # to determine the value for the 'eps' parameter, the value of the inflection point on this distance graph is used
@@ -962,79 +1039,73 @@ distances = distances[:,1]
 plt.plot(distances)
 
 
-# In[577]:
+# In[143]:
 
 
 #create the model
-dbscan = cluster.DBSCAN(eps=0.005,min_samples=50,algorithm="auto",leaf_size=30,n_jobs=-1)
+dbscan = cluster.DBSCAN(eps=0.006,min_samples=50,algorithm="auto",leaf_size=30,n_jobs=-1)
 
 
-# In[578]:
-
-
-#db_clusters = OPTICS(min_samples=50).fit(X2)
-
-
-# In[579]:
+# In[144]:
 
 
 # fit the data to the model to get the cluster id's
+starttime = datetime.datetime.now()
 db_clusters = dbscan.fit(X2)
+endtime = datetime.datetime.now()
+runtime = endtime-starttime
 
 
-# In[580]:
+# In[145]:
 
 
 cluster_count = str(len(np.unique(db_clusters.labels_)))
 points_clustered = str(len([i for i in db_clusters.labels_ if i != -1]))
-print("Number of clusters:" + cluster_count)
+print("Number of clusters: " + cluster_count)
 print("Points clustered: " + points_clustered)
-
-
-# In[581]:
-
-
 labels = db_clusters.labels_
-calinski_harabasz_score(X2,labels)
+print("Calinski-Harabsz Score: " + str(calinski_harabasz_score(X2,labels)))
+print("Silhouette Score: " + str(silhouette_score(X2,db_clusters.labels_,sample_size=20000)))
+print("Total Runtime: "+str(runtime))
 
 
-# In[582]:
-
-
-silhouette_score(X2,db_clusters.labels_,sample_size=20000)
-
-
-# In[583]:
+# In[146]:
 
 
 #add cluster results to dataframe
 results['db_cluster'] = list(db_clusters.labels_)
 
 
-# In[584]:
+# In[147]:
 
 
 #filter out results not clustered
 results2 = results.query("db_cluster!=-1")
 
 
-# In[585]:
+# In[148]:
+
+
+clrs = list(results2['db_cluster'])
+
+
+# In[149]:
 
 
 fig,ax = plt.subplots(figsize = (15,15))
-ax.scatter(results2['X'],results2['Y'],c=results2['db_cluster'],s=0.1,alpha=0.5)
+ax.scatter(results2['X'],results2['Y'],c=clrs,s=0.1,alpha=0.5)
 
 
-# In[586]:
+# In[150]:
 
 
 fig,ax = plt.subplots(figsize = (15,15)),plt.axes(projection='3d')
 ax.scatter3D(results2['X'],results2['Y'],results2['Z'],c=results2['db_cluster'],s=0.01,alpha=1)
 
 
-# # Filtering Results
+# ### Filtering Results by cluster size
 
-# In[587]:
+# In[151]:
 
 
 #looking at individual clusters which each should be equivalent to a unique/distinct "object"
@@ -1044,7 +1115,7 @@ ax.scatter(predicted_ground['X'],predicted_ground['Y'],c='grey',s=10,alpha=1)
 ax.scatter(result['X'],result['Y'],c=result['db_cluster'],s=5,alpha=1)
 
 
-# In[588]:
+# In[152]:
 
 
 fig,ax = plt.subplots(figsize = (15,15)),plt.axes(projection='3d')
@@ -1063,14 +1134,14 @@ ax.scatter3D(results2['X'],results2['Y'],results2['Z'],c=results2['db_cluster'],
 # -eigenvalues
 # -adjust or convert rgb values of the shadow class
 
-# In[589]:
+# In[153]:
 
 
 #imagery again for reference
 rgb_img
 
 
-# In[613]:
+# In[154]:
 
 
 result = results2.query("db_cluster>=0 & db_cluster<={0}".format(cluster_count))
@@ -1080,7 +1151,7 @@ ax.scatter(result['X'],result['Y'],c=result['db_cluster'],s=0.5,alpha=1)
 #ax.scatter(predicted_ground['X'],predicted_ground['Y'],c='black',s=10,alpha=1)
 
 
-# In[591]:
+# In[155]:
 
 
 point_counts = []
@@ -1098,28 +1169,22 @@ for i in result['db_cluster'].unique():
         large.append(cluster_num)
 
 
-# In[ ]:
-
-
-
-
-
-# In[592]:
+# In[156]:
 
 
 print(" small: " + str(len(small)) + " medium: " + str(len(medium)) + " large: " + str(len(large)))
 
 
-# In[593]:
+# In[157]:
 
 
 alluniqueclusters = result['db_cluster'].unique()
 
 
-# In[594]:
+# In[158]:
 
 
-# small clusters
+#small clusters
 a,b = plt.subplots(figsize = (25,25))
 b.imshow(rgb_img, extent=[0, 1, 0, 1])
 for i in small:
@@ -1135,7 +1200,7 @@ for i in small:
         b.plot(point_array[s,0],point_array[s,1],'k-')
 
 
-# In[595]:
+# In[159]:
 
 
 #medium clusters
@@ -1154,7 +1219,7 @@ for i in medium:
         b.plot(point_array[s,0],point_array[s,1],'k-')
 
 
-# In[629]:
+# In[160]:
 
 
 #large clusters
@@ -1173,7 +1238,7 @@ for i in large:
         b.plot(point_array[s,0],point_array[s,1],'k-')
 
 
-# In[153]:
+# In[161]:
 
 
 a,b = plt.subplots(figsize = (25,25))
@@ -1191,31 +1256,25 @@ for i in alluniqueclusters:
         b.plot(point_array[s,0],point_array[s,1],'k-')
 
 
-# In[154]:
+# In[162]:
 
 
 b.scatter(predicted_ground['X'],predicted_ground['Y'],c='black',s=15,alpha=1)
 
 
-# In[155]:
+# In[163]:
 
 
 a
 
 
-# In[156]:
-
-
-new_classes = ["building", "vegetation"]
-
-
-# In[618]:
+# In[164]:
 
 
 result
 
 
-# In[619]:
+# In[165]:
 
 
 #export the results to csv
